@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "l7P3VeSezAP34netCOU7XAJZrZvBEwnjnm88iCZJeS4=",
+  "Source": "SecurityManager",
+  "BasePath": "_content/SecurityManager",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
