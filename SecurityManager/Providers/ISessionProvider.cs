@@ -7,7 +7,7 @@ namespace SecurityManager.Services
 
         public bool ValidateToken(string Token);
         public string CreateToken(SecurityDataDto securityData);
-        public string KeepAlive(string Token);
-        public SecurityDataDto GetClaims(string Token);
+        public void KeepAlive(string Token);
+        public SecurityDataDto? GetClaims(string Token);
     }
 }

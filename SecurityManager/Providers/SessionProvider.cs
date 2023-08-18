@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SecurityManager.Configurations;
+using SecurityManager.Helper;
 using SecurityManager.Models.Entities;
-using System.IdentityModel.Tokens.Jwt;
+using StackExchange.Redis;
 using System.Security.Claims;
 using System.Text;
 
@@ -12,92 +14,44 @@ namespace SecurityManager.Services
     public class SessionProvider : ISessionProvider
     {
         private SessionConfigSection _sessionConfigSection;
+        private readonly IDatabase redisDb;
         
         public SessionProvider(IOptions<SessionConfigSection> sessionConfig)
         {
             _sessionConfigSection = sessionConfig.Value;
+            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(_sessionConfigSection.ConnectionString); 
+            redisDb = redis.GetDatabase();
         }
 
         public string CreateToken(SecurityDataDto securityDataDto)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_sessionConfigSection.JWTSecret));
-            var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            var claims = new List<Claim>
-            {
-                new Claim("UserId", securityDataDto.UserId),
-                new Claim("UserName", securityDataDto.UserName.ToString()),
-                new Claim("PermissionLevel", securityDataDto.PermissionLevel.ToString()),
-                new Claim("WebPlatformId", securityDataDto.WebPlatformId.ToString()),
-            };
-
-            var token = new JwtSecurityToken(
-                issuer:_sessionConfigSection.Issuer,
-                audience: _sessionConfigSection.Audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_sessionConfigSection.SessionValidityInMinutes),
-                signingCredentials: signingCredentials);
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-            return tokenHandler.WriteToken(token);
+            securityDataDto.Expires = DateTime.UtcNow.AddMinutes(_sessionConfigSection.SessionValidityInMinutes);
+            var token = TokenHelper.ComputeSha256Hash(JsonConvert.SerializeObject(securityDataDto));
+            redisDb.StringSet(token, JsonConvert.SerializeObject(securityDataDto));
+            return token;
         }
 
-        public string KeepAlive(string token)
+        public void KeepAlive(string token)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_sessionConfigSection.JWTSecret));
-            var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var decodedToken = tokenHandler.ReadJwtToken(token);
-            var claims = decodedToken.Claims;
-            var newToken = new JwtSecurityToken(
-                issuer: _sessionConfigSection.Issuer,
-                audience: _sessionConfigSection.Audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_sessionConfigSection.SessionValidityInMinutes),
-                signingCredentials: signingCredentials);
-            return tokenHandler.WriteToken(newToken); 
+            var data = GetClaims(token);
+            if(data == null) return;
+            data.Expires = DateTime.UtcNow.AddMinutes(_sessionConfigSection.KeepAliveValidityInMinutes);
+            redisDb.StringSet(token, JsonConvert.SerializeObject(data));
+            
         }
 
-        public SecurityDataDto GetClaims(string Token)
+        public SecurityDataDto? GetClaims(string Token)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_sessionConfigSection.JWTSecret));
-            var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var decodedToken = tokenHandler.ReadJwtToken(Token);
-
-            var claims = decodedToken.Claims;
-            return new SecurityDataDto
-            {
-                UserId = claims.FirstOrDefault(c => c.Type == "UserId")?.Value,
-                UserName = claims.FirstOrDefault(c => c.Type == "UserName")?.Value,
-                PermissionLevel = int.Parse(claims.FirstOrDefault(c => c.Type == "PermissionLevel")?.Value),
-                WebPlatformId = Guid.Parse(claims.FirstOrDefault(c => c.Type == "WebPlatformId")?.Value)
-            };
+            if (string.IsNullOrEmpty(Token)) return null;
+            var dataJson = redisDb.StringGet(Token);
+            if (string.IsNullOrEmpty(dataJson)) return null;
+            return JsonConvert.DeserializeObject<SecurityDataDto>(dataJson);
         }
         public bool ValidateToken(string Token)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var validationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_sessionConfigSection.JWTSecret)),
-                ValidateIssuer = true,
-                ValidIssuer = _sessionConfigSection.Issuer,
-                ValidateAudience = true,
-                ValidAudience = _sessionConfigSection.Audience
-            };
-
-            try
-            {
-                tokenHandler.ValidateToken(Token, validationParameters, out var validatedToken);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            var claims = GetClaims(Token);
+            if (claims == null) return false;
+            return claims.IsExpired;
         }
 
     }

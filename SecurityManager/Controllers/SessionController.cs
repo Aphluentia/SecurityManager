@@ -19,15 +19,15 @@ namespace SecurityManager.Controllers
         {
             return _provider.CreateToken(Data);
         }
-        [HttpPost("KeepAlive")]
-        public string SessionKeepAlive([FromBody] string Token)
+        [HttpGet("KeepAlive/{Token}")]
+        public void SessionKeepAlive(string Token)
         {
-            return _provider.KeepAlive(Token);
+            _provider.KeepAlive(Token);
         }
-        [HttpPost("ValidateSession")]
-        public bool ValidateToken([FromBody] string Token)
+        [HttpGet("ValidateSession/{Token}")]
+        public bool ValidateToken(string Token)
         {
-            return _provider.ValidateToken(Token);
+            return !_provider.ValidateToken(Token);
         }
         [HttpGet("RetrieveSessionData/{Token}")]
         public SecurityDataDto GetTokenData(string Token)
