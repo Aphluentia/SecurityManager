@@ -47,12 +47,12 @@ namespace SecurityManager.Services
             if (string.IsNullOrEmpty(dataJson)) return null;
             return JsonConvert.DeserializeObject<SecurityDataDto>(dataJson);
         }
-        public bool ValidateToken(string Token)
+     
+        public void DeleteSessionData(string Token)
         {
-            var claims = GetClaims(Token);
-            if (claims == null) return false;
-            return claims.IsExpired;
+            if (string.IsNullOrEmpty(Token)) return;
+            var dataJson = redisDb.KeyDelete(Token);
+            return;
         }
-
     }
 }

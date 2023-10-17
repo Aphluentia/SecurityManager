@@ -27,11 +27,19 @@ namespace SecurityManager.Controllers
         [HttpGet("ValidateSession/{Token}")]
         public bool ValidateToken(string Token)
         {
-            return !_provider.ValidateToken(Token);
+            var claims = _provider.GetClaims(Token);
+            if (claims == null || claims.Expires < DateTime.Now)
+            {
+                _provider.DeleteSessionData(Token);
+                return false;
+            }
+            _provider.KeepAlive(Token);
+            return true;
         }
         [HttpGet("RetrieveSessionData/{Token}")]
         public SecurityDataDto GetTokenData(string Token)
         {
+            _provider.KeepAlive(Token);
             return _provider.GetClaims(Token);
         }
     }
