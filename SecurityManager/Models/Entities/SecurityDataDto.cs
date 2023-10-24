@@ -8,6 +8,6 @@ namespace SecurityManager.Models.Entities
         public UserType userType{ get; set; }
         public DateTime Expires { get; set; }
         public bool IsExpired => DateTime.UtcNow > Expires;
-        public int TimeLeft => (int)(Expires-DateTime.UtcNow).TotalMinutes;
+        public ICollection<ModuleSnapshot> ModuleSnapshots { get; set; } = new List<ModuleSnapshot>();
     }
 }

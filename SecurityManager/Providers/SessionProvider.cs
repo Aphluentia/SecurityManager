@@ -54,5 +54,38 @@ namespace SecurityManager.Services
             var dataJson = redisDb.KeyDelete(Token);
             return;
         }
+        public void AddModuleSnapshot(string Token, ModuleSnapshot moduleSnapshot)
+        {
+            if (string.IsNullOrEmpty(Token)) return;
+            var dataJson = redisDb.StringGet(Token);
+            if (string.IsNullOrEmpty(dataJson)) return;
+            var data = JsonConvert.DeserializeObject<SecurityDataDto>(dataJson);
+            data.ModuleSnapshots.Add(moduleSnapshot);
+            redisDb.StringSet(Token, JsonConvert.SerializeObject(data));
+            return;
+        }
+        public void DeleteModuleSnapshot(string Token,Guid snapshotId)
+        {
+            if (string.IsNullOrEmpty(Token)) return;
+            var dataJson = redisDb.StringGet(Token);
+            if (string.IsNullOrEmpty(dataJson)) return;
+            var data = JsonConvert.DeserializeObject<SecurityDataDto>(dataJson);
+            data.ModuleSnapshots = data.ModuleSnapshots.ToList().FindAll(c=>c.ModuleId!=snapshotId);
+            redisDb.StringSet(Token, JsonConvert.SerializeObject(data));
+            return;
+        }
+
+        public void UpdateModuleId(string Token, Guid moduleId, ModuleSnapshot snapshot)
+        {
+            if (string.IsNullOrEmpty(Token)) return;
+            var dataJson = redisDb.StringGet(Token);
+            if (string.IsNullOrEmpty(dataJson)) return;
+            var data = JsonConvert.DeserializeObject<SecurityDataDto>(dataJson);
+            var ModuleSnapshots = data.ModuleSnapshots.ToList().FindAll(c => c.ModuleId != moduleId);
+            ModuleSnapshots.Add(snapshot);
+            data.ModuleSnapshots = ModuleSnapshots;
+            redisDb.StringSet(Token, JsonConvert.SerializeObject(data));
+            return;
+        }
     }
 }

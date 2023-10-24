@@ -25,10 +25,7 @@
           "net6.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {},
-          "https://grm.millenniumbcp.net/repository/BCP_Nuget_Hosted/": {},
-          "https://grm.millenniumbcp.net/repository/nuget-group/": {},
           "https://pkgs.dev.azure.com/ptbcp/_packaging/ptbcp/nuget/v3/index.json": {}
         },
         "frameworks": {
