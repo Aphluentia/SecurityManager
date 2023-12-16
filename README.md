@@ -1,5 +1,6 @@
-# SecurityManager  
-Security Logic API  
+# SecurityManager    
+Ensures security and efficient session management by working with a Redis database. Responsible for token generation, validation, and handling module snapshots for data integrity.  
+
 
 ## Setup       
 - docker build . -t securitymanager    
